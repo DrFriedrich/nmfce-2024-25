@@ -1,0 +1,157 @@
+###W10-W3_parta_start_py
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import axes3d, Axes3D
+
+# Define the function
+def f(x):
+    ''' Objective function '''
+    return (x[0] + 2*x[1] - 7)**2 + (2*x[0] + x[1] - 5)**2
+
+# Define the gradient of the function
+def grad_f(x):
+    ''' Gradient of the objective function '''
+    return np.array([2*(x[0] + 2*x[1] - 7) + 4*(2*x[0] + x[1] - 5), 4*(x[0] + 2*x[1] - 7) + 2*(2*x[0] + x[1] - 5)])
+
+# Create a grid of x and y values
+x = np.linspace(-5, 5, 100)
+y = np.linspace(0, 10, 100)
+X, Y = np.meshgrid(x, y)
+
+# Evaluate the function on the grid
+Z = f([X, Y])
+
+# Create the figure for plotting
+fig = plt.figure(figsize=(12, 8))
+ax = fig.add_subplot(111, projection='3d')
+
+# Plot the surface
+ax.plot_surface(X, Y, Z, alpha=0.5, rstride=4, cstride=4, color='b')
+
+# Plot the gradient vectors (quivers)
+# Subsample for quiver to reduce the density of the vectors
+skip = (slice(None, None, 6), slice(None, None, 5))  # Change 5 to greater numbers to reduce more
+U, V = grad_f([X[skip], Y[skip]])
+# Normalization
+norm = np.sqrt(U**2 + V**2)
+U /= norm
+V /= norm
+ax.quiver(X[skip], Y[skip], -0, U, V, 0, color='r', length=0.3, normalize=True)
+
+# Labels and title
+ax.set_xlabel('X axis')
+ax.set_ylabel('Y axis')
+ax.set_zlabel('Z axis')
+ax.set_title('Surface plot with gradient projection in XY-plane')
+
+# Show plot
+plt.show()
+###W10-W3_parta_end
+
+
+###W10-W3_partb_start_py
+# Steepest descent function
+def steepest_descent(f, grad_f, init, lr=0.1, max_iter=300, tol=1e-6):
+    """
+    Performs the steepest descent optimisation.
+
+    Parameters:
+        f (callable): The objective function
+        grad_f (callable): The gradient of the objective function
+        init (array): Initial point for the optimisation
+        lr (float): Learning rate (step size)
+        max_iter (int): Maximum number of iterations
+        tol (float): Tolerance for the stopping criterion
+
+    Returns:
+        x (array): The optimised variable
+        f(x) (float): The function value at the optimised point
+        i (int): The number of iterations performed
+    """
+    x_history = [init]
+    x = np.array(init, dtype=float)
+    for i in range(max_iter):
+        grad = grad_f(x)
+        x_new = x - lr * grad
+        if np.linalg.norm(x_new - x) < tol:
+            return x_new, f(x_new), i+1, x_history
+        x = x_new
+        x_history.append(x_new)
+    return x, f(x), max_iter, x_history
+
+# Initial guess
+init_point = [0, 10]
+
+# Perform optimisation
+result_x, result_f, iterations, x_history = steepest_descent(f, grad_f, init_point)
+
+# Convert the history of the steps into an numpy array which is easier to handle later
+x_history = np.array(x_history)
+
+print("Optimized x:", result_x)
+print("Minimum value of f(x):", result_f)
+print("Iterations:", iterations)
+#print("Steps:", x_history)
+###W10-W3_partb_end
+
+
+###W10-W3_partc_start_py
+# Generate grid for contour plot
+xgrid = np.linspace(-5, 4, 400)
+ygrid = np.linspace(0, 11, 400)
+X, Y = np.meshgrid(xgrid, ygrid)
+Z = f([X, Y])
+
+# Plot the contours
+plt.figure(figsize=(8, 6))
+cp = plt.contour(X, Y, Z, levels=np.logspace(-1, 3, 20), cmap='jet')
+plt.colorbar(cp, label='f(x, y)')
+plt.plot(x_history[:, 0], x_history[:, 1], 'o-', color='red')  # plot trajectory
+plt.scatter([1], [3], color='green', marker='*', s=100, label='Minimum (1, 3)')
+plt.title('Contour plot of f(x, y) with steepest descent trajectory')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.legend()
+
+plt.show()
+###W10-W3_partc_end
+
+###W10-W3_partd_start_py
+from scipy.optimize import minimize
+
+# Objective Function as callable for scipy
+def obj_func(x):
+    return f(x), grad_f(x)
+
+# Track optimisation steps
+# The callback is called in every iteration. We use it to append the current step to a list.
+def callback(x):
+    points.append(x.copy())
+
+# Initial guess
+init_point = [0, 10]
+points = [init_point]
+
+# Run optimisation
+result = minimize(fun=f, x0=init_point, method='CG', jac=grad_f, callback=callback, options={'disp': True})
+x_CG_history = np.array(points)  # to easily use column slicing
+
+# Generate grid for contour plot
+xgrid = np.linspace(-5, 5, 400)
+ygrid = np.linspace(0, 11, 400)
+X, Y = np.meshgrid(xgrid, ygrid)
+Z = f([X, Y])
+
+# Plot the contours
+plt.figure(figsize=(8, 6))
+cp = plt.contour(X, Y, Z, levels=np.logspace(-1, 3, 20), cmap='jet')
+plt.colorbar(cp, label='f(x, y)')
+plt.plot(x_CG_history[:, 0], x_CG_history[:, 1], 'o-', color='red')  # plot trajectory
+plt.scatter([1], [3], color='green', marker='*', s=100, label='Minimum (1, 3)')
+plt.title('Contour plot of f(x, y) with Conjugate Gradient trajectory')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.legend()
+
+plt.show()
+###W10-W3_partd_end
